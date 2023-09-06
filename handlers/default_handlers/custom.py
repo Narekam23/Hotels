@@ -78,7 +78,6 @@ def get_city_name(message: Message) -> None:
     else:
         bot.send_message(message.from_user.id,
                          'Некорректное название')
-        bot.delete_state(message.from_user.id, message.chat.id)
 
 
 @bot.callback_query_handler(func=lambda call: True, state=UserInfoState.city_name_custom)
@@ -141,6 +140,7 @@ def callback_inline(call: CallbackQuery):
         month=month,
         day=day
     )
+    date_comparison = utils_func.date_comparison()
     if action == "DAY":
         bot.send_message(
             chat_id=call.from_user.id,
@@ -151,17 +151,30 @@ def callback_inline(call: CallbackQuery):
         with bot.retrieve_data(call.from_user.id) as data:
             data['arrival_date'] = date.strftime('%d.%m.%Y')
 
-        now = datetime.datetime.now()
-        bot.send_message(
-            call.message.chat.id,
-            "Выберите дату выезда",
-            reply_markup=calendar.create_calendar(
-                name=calendar_1_callback.prefix,
-                year=now.year,
-                month=now.month,
-            ),
-        )
-        bot.set_state(call.from_user.id, UserInfoState.departure_date_custom)
+        answer = date_comparison(datetime.datetime.now().strftime('%d.%m.%Y'), date.strftime('%d.%m.%Y'))
+        if answer:
+            now = datetime.datetime.now()
+            bot.send_message(
+                call.message.chat.id,
+                "Выберите дату выезда",
+                reply_markup=calendar.create_calendar(
+                    name=calendar_1_callback.prefix,
+                    year=now.year,
+                    month=now.month,
+                ),
+            )
+            bot.set_state(call.from_user.id, UserInfoState.departure_date_custom)
+        else:
+            now = datetime.datetime.now()
+            bot.send_message(
+                call.message.chat.id,
+                "Дата заезда не может быть раньше текущей даты!\nВыберите дату заезда",
+                reply_markup=calendar.create_calendar(
+                    name=calendar_1_callback.prefix,
+                    year=now.year,
+                    month=now.month,
+                ),
+            )
 
 
 @bot.callback_query_handler(
@@ -202,7 +215,7 @@ def callback_inline(call: CallbackQuery):
                 bot.send_message(
 
                     call.message.chat.id,
-                    "Дата заезда не может быть раньше даты выезда!\nВыберите дату выезда",
+                    "Дата выезда не может быть раньше даты заезда!\nВыберите дату выезда",
                     reply_markup=calendar.create_calendar(
                         name=calendar_1_callback.prefix,
                         year=now.year,
@@ -436,7 +449,7 @@ def callback(call):
             for info in data['hotel_info']['images']:
                 bot.send_photo(call.message.chat.id, info[1])
                 bot.send_message(call.message.chat.id, info[0])
-    bot.reply_to(call.message, f"{text} - Нажмите чтобы выбрать другую команду")
+        bot.reply_to(call.message, f"{text} - Нажмите чтобы выбрать другую команду")
 
     with bot.retrieve_data(call.from_user.id) as data:
 
